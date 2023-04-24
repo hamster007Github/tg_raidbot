@@ -22,7 +22,7 @@ It is highly recommended to use virtual python environment (example here with vi
 - install dependencies:`~/<your-venv-folder>/tg_raidbot_env/bin/pip3 install -r requirements.txt`
 - `cp config.toml.example config.toml`
 - adapt config.toml for your needs
-- run script: `~/<your-venv-folder>/tg_raidbot_env/bin/python3 eventwatcher.py`
+- run script: `~/<your-venv-folder>/tg_raidbot_env/bin/python3 run.py`
 
 # PM2 example setup
 Based on the examples in [Installation](#Installation) you can use following ecosystem file (linux user `myuser`):
