@@ -1,0 +1,13 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# User configuration
+config*.toml
+
+# tmp
+.msgid_cache
+
+# Logging
+*.log
+*.log.*

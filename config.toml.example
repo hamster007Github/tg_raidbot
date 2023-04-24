@@ -1,0 +1,62 @@
+[general]
+# bot API token from @godfather
+token = "123456789:ABCDEFGHIJK"
+# update raid message cycle in seconds
+raidupdate_cycle_in_s = 60
+# update external pogodata cycle in hours
+pogodata_update_cycle_in_h = 24
+
+[db]
+# only RDM supported currently
+host = "localhost"
+port = 3307
+name = "rdmdb"
+user = "rdmuser"
+password = "rdmuser_password"
+
+[format]
+# language of raid data.
+# available langauges: "de", "en", "es", "fr", "hi", "id", "it", "ja", "ko", "pl", "pt-br", "ru", "sv", "th", "tr", "zh-tw"
+language = "en"
+# number of maximum chars for gym names
+max_gymname_len = 27
+# raidtime string format (see https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
+time_format = "%H:%M"
+
+[templates]
+# General:
+#  - Use keyword with ${keyword}
+#  - available keyword can be find for every tmpl string in description
+
+# message to display, if there are no raids available.
+# Available keywords: -
+tmpl_no_raid_msg = "❌ No raids"
+
+# message template for raidlevel title, if raidlevel grouping is activated.
+#Available keyword: raidlvl_name, raidlvl_num, raidlvl_emoji
+tmpl_grouped_title_msg = "\n<b><u>${raidlvl_name}:</u></b>"
+
+# message template for single raidegg message
+# Available keywords: raidlvl_name, raidlvl_num, raidlvl_emoji, gym_name, lat, lon, gmaps_url, time_start, time_end
+tmpl_raidegg_msg = "🥚${raidlvl_num}* ${time_start}-${time_end}\n└📍<a href='${gmaps_url}'>${gym_name}</a>"
+
+# message template for single raid message
+# Available keywords: same as 'tmpl_raidegg_msg' + pokemon_name, atk_fast, atk_charge
+tmpl_raid_msg = "🐣${pokemon_name} ${time_start}-${time_end}\n└⚔️${atk_fast}/${atk_charge}\n└📍<a href='${gmaps_url}'>${gym_name}</a>"
+
+##################################################################
+# add a separate [[raidconfig]] block for every raid channel/group
+##################################################################
+[[raidconfig]]
+chat_id = "123456789"
+raidlevel = [5,6]
+eggs = true
+raidlevel_grouping = true
+geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0"
+
+#[[raidconfig]]
+#chat_id = "-987654321"
+#raidlevel = [1]
+#eggs = false
+#raidlevel_grouping = false
+
