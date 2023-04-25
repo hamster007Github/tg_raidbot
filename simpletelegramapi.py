@@ -20,6 +20,7 @@ import logging
 '''
 log = logging.getLogger(__name__)
 MAX_MSG_LEN = 3000
+TRIMMED_END_STR = '..'
 
 '''
 ****************************************
@@ -39,8 +40,18 @@ class SimpleTelegramApi:
         decoded_response = response.content.decode("utf8")
         return decoded_response
 
-    def _util_limit_msg_len(self, text:str) -> str:
-        trimmed_text = (text[:(MAX_MSG_LEN-2)] + '..') if len(text) > MAX_MSG_LEN else text
+    def _util_limit_msg_len(self, text:str, smart_trim:bool = True, trim_str:str="\n") -> str:
+        if len(text) > MAX_MSG_LEN:
+            # trim to max len - TRIMMED_END_STR
+            trimmed_text = text[:(MAX_MSG_LEN-len(TRIMMED_END_STR))]
+            if smart_trim:
+                # trim to last found trim_str
+                index = trimmed_text.rfind(trim_str)
+                trimmed_text = trimmed_text[:index]
+            # mark trimmed message with TRIMMED_END_STR substring
+            trimmed_text += TRIMMED_END_STR
+        else:
+            trimmed_text = text
         return trimmed_text
 
     def is_response_ok(self, response) -> bool:
@@ -61,9 +72,9 @@ class SimpleTelegramApi:
             result = False
         return result
 
-    def send_message(self, chat_id:int, text:str, parse_mode="HTML"):
+    def send_message(self, chat_id:int, text:str, smart_trim:bool = True, parse_mode="HTML"):
         try:
-            text = self._util_limit_msg_len(urllib.parse.quote_plus(text))
+            text = urllib.parse.quote_plus(self._util_limit_msg_len(text, smart_trim))
             response = self._send_request("sendMessage?text={}&chat_id={}&parse_mode={}".format(text, chat_id, parse_mode))
             response = json.loads(response)
             if not response["ok"]:
@@ -75,9 +86,9 @@ class SimpleTelegramApi:
             response = None
         return response
 
-    def edit_message(self, chat_id:int, message_id:int, text:str, parse_mode="HTML"):
+    def edit_message(self, chat_id:int, message_id:int, text:str, smart_trim:bool = True, parse_mode="HTML"):
         try:
-            text = self._util_limit_msg_len(urllib.parse.quote_plus(text))
+            text = urllib.parse.quote_plus(self._util_limit_msg_len(text, smart_trim))
             response = self._send_request("editMessageText?chat_id={}&message_id={}&parse_mode={}&text={}".format(chat_id, message_id, parse_mode, text))
             response = json.loads(response)
             if not response["ok"]:
