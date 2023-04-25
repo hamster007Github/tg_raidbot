@@ -22,11 +22,17 @@ language = "en"
 max_gymname_len = 27
 # raidtime string format (see https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
 time_format = "%H:%M"
+# string to use, if there is no gymname set in database (NULL, None)
+unknown_gym_name = "N/A"
 
 [templates]
 # General:
 #  - Use keyword with ${keyword}
 #  - available keyword can be find for every tmpl string in description
+
+# message to display, if message was cut because of maximum Telegram message length reached
+# Available keywords: -
+tmpl_msglimit_reached_msg = "\n...msg too long"
 
 # message to display, if there are no raids available.
 # Available keywords: -

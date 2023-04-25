@@ -71,6 +71,12 @@ class TelegramRaidbot():
         if not self._load_config_parameter(self._rootdir + "/config.toml"):
             return 2
 
+    def _load_toml_parameter(self, toml_dict, parametername:str, fallback):
+        parameter = fallback
+        if parametername in toml_dict.keys():
+            parameter = toml_dict[parametername]
+        return parameter
+
     def _load_config_parameter(self, filepath:str) -> bool:
         # load configuration from toml configuration file
         try:
@@ -103,9 +109,11 @@ class TelegramRaidbot():
             self._cfg_format_language = cfg_format["language"]
             self._cfg_format_max_gymname_len = cfg_format["max_gymname_len"]
             self._cfg_format_time = cfg_format["time_format"]
+            self._cfg_format_unknown_gym_name = self._load_toml_parameter(cfg_format, "unknown_gym_name", fallback = "N/A")
             # section [template]
             cfg_templates = config.get("templates")
-            self._cfg_format_no_raids_msg = cfg_templates["tmpl_no_raid_msg"]
+            self._cfg_tmpl_msglimit_reached_msg = self._load_toml_parameter(cfg_templates, "tmpl_msglimit_reached_msg", fallback = "...")
+            self._cfg_tmpl_no_raids_msg = cfg_templates["tmpl_no_raid_msg"]
             self._cfg_tmpl_grouped_title_msg = Template(cfg_templates["tmpl_grouped_title_msg"])
             self._cfg_tmpl_raid_msg = Template(cfg_templates["tmpl_raid_msg"])
             self._cfg_tmpl_raidegg_msg = Template(cfg_templates["tmpl_raidegg_msg"])
@@ -116,10 +124,7 @@ class TelegramRaidbot():
                 raidlevel_list = raidconfig['raidlevel']
                 eggs = raidconfig['eggs']
                 raidlevel_grouping = raidconfig['raidlevel_grouping']
-                if 'geofence' in raidconfig.keys():
-                    geofence = raidconfig['geofence']
-                else:
-                    geofence = None
+                geofence = self._load_toml_parameter(raidconfig, "geofence", fallback = None)
                 self.raidchannel_list.append(RaidChannel(chat_id, raidlevel_list, eggs, raidlevel_grouping, geofence))
         except Exception:
             log.exception("Error in parsing configuration. Check your config.toml")
@@ -146,7 +151,7 @@ class TelegramRaidbot():
 
     def _send_new_tg_msg(self, chat_id:str, msg:str, pin_msg:bool=True) -> None:
         try:
-            response = self._tgapi.send_message(chat_id=chat_id, text=msg, parse_mode="HTML")
+            response = self._tgapi.send_message(chat_id=chat_id, text=msg, trim_end_str = self._cfg_tmpl_msglimit_reached_msg, parse_mode="HTML")
             log.debug(f"send new msg, response:{response}")
             if response["ok"]:
                 msg_id = response["result"]["message_id"]
@@ -168,7 +173,7 @@ class TelegramRaidbot():
         # update old message
         else:
             try:
-                response = self._tgapi.edit_message(chat_id=chat_id, message_id=self._msgid_cache[chat_id], text=msg, parse_mode="HTML")
+                response = self._tgapi.edit_message(chat_id=chat_id, message_id=self._msgid_cache[chat_id], text=msg, trim_end_str = self._cfg_tmpl_msglimit_reached_msg, parse_mode="HTML")
                 log.debug(f"edit msg, response:{response}")
                 if response is not None and not self._tgapi.is_response_ok(response):
                     # we got a valid response, but error reported -> we need to create new message
@@ -184,11 +189,15 @@ class TelegramRaidbot():
         new_raid_msg = ""
         if raidinfo_list:
             for raidinfo in raidinfo_list:
-                # get start and end time
+                # get all keyword data
                 v_time_start = self.convert_timestamp_to_str(raidinfo['raid_battle_timestamp'], self._cfg_format_time)
                 v_time_end = self.convert_timestamp_to_str(raidinfo['raid_end_timestamp'], self._cfg_format_time)
                 max_len = self._cfg_format_max_gymname_len
-                v_gym_name = (raidinfo['gym_name'][:(max_len-2)] + '..') if len(raidinfo['gym_name']) > max_len else raidinfo['gym_name']
+                if raidinfo['gym_name'] is None:
+                    v_gym_name = self._cfg_format_unknown_gym_name
+                else:
+                    gym_name = raidinfo['gym_name']
+                    v_gym_name = (gym_name[:(max_len-2)] + '..') if len(gym_name) > max_len else gym_name
                 v_lat = raidinfo['lat']
                 v_lon = raidinfo['lon']
                 v_gmaps_url = f"https://maps.google.de/?q={v_lat:.6f},{v_lon:.6f}"
@@ -257,7 +266,7 @@ class TelegramRaidbot():
                 new_raid_msg = self.create_raid_msg(raidinfo_list)
             # check for empty raidmessage (no raids) -> send out 'tmpl_no_raid_msg' from config.toml
             if new_raid_msg == "":
-                new_raid_msg = self._cfg_format_no_raids_msg + "\n"
+                new_raid_msg = self._cfg_tmpl_no_raids_msg + "\n"
             # add actual date + time (so everyone can see when raid message was updated last time)
             new_raid_msg += f"\n\u23F1 {datetime.now().strftime('%d.%m.%y %H:%M')}"
             log.debug(f"new raid_msg (len:{len(new_raid_msg)}):\n{new_raid_msg}")
