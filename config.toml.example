@@ -22,7 +22,7 @@ language = "en"
 max_gymname_len = 27
 # raidtime string format (see https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
 time_format = "%H:%M"
-# string to use, if there is no gymname set in database (NULL, None)
+# string to use, if there is no gymname set in database (NULL, None). Default: "N/A"
 unknown_gym_name = "N/A"
 
 [templates]
@@ -54,15 +54,19 @@ tmpl_raid_msg = "🐣${pokemon_name} ${time_start}-${time_end}\n└⚔️${atk_f
 # add a separate [[raidconfig]] block for every raid channel/group
 ##################################################################
 [[raidconfig]]
-chat_id = "123456789"
-raidlevel = [5,6]
-eggs = true
-raidlevel_grouping = true
-geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0"
+chat_id = "123456789"       # @channelname or chat_id number
+raidlevel = [5,6]           # comma seperated raid levels (1-10) to be showed. Order in the raid message is the same as configurated.
+eggs = true                 # (optional) true[default]: also show raid eggs, false: show only already started raids
+raidlevel_grouping = true   # (optional) true[default]: order raids by raidlevel + time, false: order raids only by time
+order_time_reverse = false  # (optional) true: order raids by raidlevel + time, false[default]: order raids only by time
+pin_msg = true              # (optional) true[default]: always pin new raid message, false: don't pin raid message (if you change this, you need to delete old message first)
+geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0" # (optional): filter raids by geofence. Must be a closed geofence (last coordinate = first coordinate). Format: "lat_1 lon_1, lat_2 lon_2, ..., lat_1 lon_1"
 
+# additional raidchannel(s) -> remove '#' and set values.
 #[[raidconfig]]
-#chat_id = "-987654321"
-#raidlevel = [1]
-#eggs = false
-#raidlevel_grouping = false
-
+#chat_id =
+#raidlevel =
+#eggs =
+#raidlevel_grouping =
+#order_time_reverse =
+#geofence =
