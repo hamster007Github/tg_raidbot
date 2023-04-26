@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 # Class: DbConnector
 #****************************************
 class DbConnector():
-    def __init__(self, host, db_name, username, password, port=3306):
+    def __init__(self, host:str, db_name:str, username:str, password:str, port:int=3306):
         self._db_connection = None
         self._host = host
         self._port = port
@@ -89,25 +89,19 @@ class DbConnector():
 # Class: RdmConnector
 #****************************************
 class RdmConnector():
-    def __init__(self, db_host, db_port, db_name, db_username, db_password):
+    def __init__(self, db_host:str, db_port:int, db_name:str, db_username:str, db_password:str):
         self._dbconnector = DbConnector(host=db_host, port=db_port, db_name=db_name, username=db_username, password=db_password)
 
     def __del__(self):
         del self._dbconnector
 
-    def get_raids(self, raidlevel_list, unknown_raids:bool = True, geofence: str = None):
-        if geofence is not None:
-            sql_geofence = f"AND ST_CONTAINS(st_geomfromtext('POLYGON(({geofence}))') , point(lat,lon))"
-        else:
-            # if no geofence provided: get all raids from DB without area limitation
-            sql_geofence = ""
-        if not unknown_raids:
-            # if unknown_raids == True: provide only "hatched" raids, where raidpokemon is known (pokemon_id != 0)
-            sql_unknown_raids = "AND raid_pokemon_id <> 0"
-        else:
-            sql_unknown_raids = ""
-        raidlevel_str = ','.join([str(x) for x in raidlevel_list])
-        sql_query = f"SELECT name AS gym_name, raid_level, raid_pokemon_id, raid_battle_timestamp, raid_end_timestamp, raid_pokemon_move_1 AS atk_fast, raid_pokemon_move_2 AS atk_charge, lat, lon FROM gym WHERE UNIX_TIMESTAMP() < raid_end_timestamp AND raid_level IN ({raidlevel_str}) {sql_geofence} {sql_unknown_raids} ORDER BY raid_spawn_timestamp;"
+    def get_raids(self, raidlevel_list, unknown_raids:bool = True, geofence:str = None, order_time_reverse:bool = False):
+        sql_order = "DESC" if order_time_reverse else "ASC"
+        sql_geofence = "" if geofence is None else f"AND ST_CONTAINS(st_geomfromtext('POLYGON(({geofence}))') , point(lat,lon))"
+        sql_unknown_raids = "" if unknown_raids else "AND raid_pokemon_id <> 0"
+        raidlevel_str = ','.join([str(raidlevel) for raidlevel in raidlevel_list])
+
+        sql_query = f"SELECT name AS gym_name, raid_level, raid_pokemon_id, raid_battle_timestamp, raid_end_timestamp, raid_pokemon_move_1 AS atk_fast, raid_pokemon_move_2 AS atk_charge, lat, lon FROM gym WHERE UNIX_TIMESTAMP() < raid_end_timestamp AND raid_level IN ({raidlevel_str}) {sql_geofence} {sql_unknown_raids} ORDER BY raid_spawn_timestamp {sql_order};"
         dbreturn = self._dbconnector.execute_query(sql_query)
         return dbreturn
 

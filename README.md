@@ -2,17 +2,18 @@
 tg_raidbot is a configurable Telegram raid summary bot for scanner systems like RDM and MAD (currently only RDM is supported).
 
 # Features
-- Configurable raid summary message templates with some keywords (see '[templates]' chapter in `config.toml.example`)
-- Configurable time format
-- Automaticly pinning raid summary message
-- Multiple languages supported: de, en, es, fr, hi, id, it, ja, ko, pl, pt-br, ru, sv, th, tr, zh-tw
-- Multiple raid chats, each configurable:
-  - Choose between raid level grouped raid summary message or only time sorted for each raid chat
+- Configurable message templates with some keywords (see '[templates]' chapter in `config.toml.example`)
+- Configurable time format for raid start / end times
+- Multiple languages supported for raidnames, pokemon names and attacks: de, en, es, fr, hi, id, it, ja, ko, pl, pt-br, ru, sv, th, tr, zh-tw
+- Multiple raid chats, each with following individual configuration:
+  - choose, if raids are grouped by raid level or only ordered by time
+  - choose time order (latest or earliest end time first)
   - geofence support
   - include or exclude raid eggs
+  - automatically pin message (activate or deactivate)
 
 # Limitations
-Only RDM is supported for now. Extension to support additional scanner system should be easy by extending `scannerconnector.py`. PRs welcome.
+Only RDM is supported for now. Extension to support additional scanner systems should be easy by extending `scannerconnector.py`. PRs welcome.
 
 # Installation
 It is highly recommended to use virtual python environment (example here with virtualenv plugin).
@@ -43,6 +44,34 @@ Based on the examples in [Installation](#Installation) you can use following eco
 ## config.toml options
 For now, see `config.toml.example` file. All options are described there.
 
+### example 1
+- public channel: @blub
+- show raids level 5 and 6 (mega) including raid eggs grouped by raid level. First level 5, second level 6
+- raids with earliest end time should be showed first
+- no geofence filtering (all raids in database). Remark: by don't provide geofence parameter
+
+```
+[[raidconfig]]
+chat_id = "@blub"
+raidlevel = [5,6]
+eggs = true
+raidlevel_grouping = true
+order_time_reverse = false
+```
+### example 2
+- private group chat_id: -987654321
+- show only already started raids level 1, 2 and 3 not grouped by raid level, only by time
+- raids with latest end time should be showed first
+- only raids in rectangular geofence between lat:40.0 lon:7.0 and lat:50.0 lon:8.0
+
+```
+[[raidconfig]]
+chat_id = "-987654321"
+raidlevel = [3,2,1] # remark: order will have no effect, because of 'raidlevel_grouping = false'
+eggs = false
+raidlevel_grouping = false
+order_time_reverse = true
+geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0"
+```
 # Credits
 [WatWowMap/pogo-translations](https://github.com/WatWowMap/pogo-translations), where the pogo translation data are fetched from.
-
