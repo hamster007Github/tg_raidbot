@@ -38,12 +38,13 @@ class DbConnector():
         self._password = password
 
     def __del__(self):
+        log.debug("DbConnector: __del__")
         self._disconnect()
 
     def _connect(self):
         try:
-            # only create new connection, if not already a connection was created before
-            if self._db_connection is None:
+            # only create new connection, if not already a connection is available
+            if self._db_connection is None or not self._db_connection.is_connected():
                 self._db_connection = mysql.connector.connect(
                     host = self._host,
                     port = self._port,
@@ -59,8 +60,8 @@ class DbConnector():
 
     def _disconnect(self):
         if self._db_connection is not None:
+            log.debug("DbConnector: disconnect")
             self._db_connection.close()
-            self._db_connection = None
 
     def execute_query(self, query, commit=False, disconnect=True):
         result = None
@@ -75,6 +76,7 @@ class DbConnector():
                 result = cursor.fetchall()
             if disconnect:
                 self._disconnect()
+            cursor.close()
             log.debug(f"DbConnector: SQL query successfully executed")
             log.debug(f"DbConnector: SQL query result: {result}")
         except Error as e:

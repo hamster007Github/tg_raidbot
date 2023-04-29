@@ -5,6 +5,8 @@ tg_raidbot is a configurable Telegram raid summary bot for scanner systems like 
 - Configurable message templates with some keywords (see '[templates]' chapter in `config.toml.example`)
 - Configurable time format for raid start / end times
 - Multiple languages supported for raidnames, pokemon names and attacks: de, en, es, fr, hi, id, it, ja, ko, pl, pt-br, ru, sv, th, tr, zh-tw
+- Chat topics support (see [Telegram-Blog](https://www.telegram.org/blog/topics-in-groups-collectible-usernames))
+  - Remark: you need to enable thsi feature first in group setting -> enable 'Topics' switch
 - Multiple raid chats, each with following individual configuration:
   - choose, if raids are grouped by raid level or only ordered by time
   - choose time order (latest or earliest end time first)
@@ -73,5 +75,6 @@ raidlevel_grouping = false
 order_time_reverse = true
 geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0"
 ```
+
 # Credits
 [WatWowMap/pogo-translations](https://github.com/WatWowMap/pogo-translations), where the pogo translation data are fetched from.

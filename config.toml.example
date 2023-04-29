@@ -55,6 +55,7 @@ tmpl_raid_msg = "🐣${pokemon_name} ${time_start}-${time_end}\n└⚔️${atk_f
 ##################################################################
 [[raidconfig]]
 chat_id = "123456789"       # @channelname or chat_id number
+message_thread_id = 123     # (optional) message_thread_id number of a chat topic. Needed in addition to 'chat_id', if you would like to post the message in a chat topic
 raidlevel = [5,6]           # comma seperated raid levels (1-10) to be showed. Order in the raid message is the same as configurated.
 eggs = true                 # (optional) true[default]: also show raid eggs, false: show only already started raids
 raidlevel_grouping = true   # (optional) true[default]: order raids by raidlevel + time, false: order raids only by time
