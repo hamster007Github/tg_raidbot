@@ -39,14 +39,27 @@ class SimpleTelegramApi:
         decoded_response = response.content.decode("utf8")
         return decoded_response
 
-    def _util_limit_msg_len(self, text:str, smart_trim:bool = True, trim_end_str:str="...", trim_str:str="\n") -> str:
+    def _limit_text_len(self, text:str) -> str:
+        if len(text) > MAX_MSG_LEN:
+            # trim to max len - trim_end_str
+            trimmed_text = text[:(MAX_MSG_LEN-1)]
+        else:
+            trimmed_text = text
+        return trimmed_text
+
+    def _create_send_msg_request(self, chat_id:int, text:str, parse_mode:str) -> str:
+        text = urllib.parse.quote_plus(self._limit_text_len(text))
+        request = f"sendMessage?text={text}&chat_id={chat_id}&parse_mode={parse_mode}"
+        return request
+
+    @staticmethod
+    def util_smart_trim_text(text:str, trim_end_str:str="...", trim_str:str="\n") -> str:
         if len(text) > MAX_MSG_LEN:
             # trim to max len - trim_end_str
             trimmed_text = text[:(MAX_MSG_LEN-len(trim_end_str))]
-            if smart_trim:
-                # trim to last found trim_str
-                index = trimmed_text.rfind(trim_str)
-                trimmed_text = trimmed_text[:index]
+            # trim to last found trim_str
+            index = trimmed_text.rfind(trim_str)
+            trimmed_text = trimmed_text[:index]
             # mark trimmed message with trim_end_str substring
             trimmed_text += trim_end_str
         else:
@@ -67,27 +80,42 @@ class SimpleTelegramApi:
                 else:
                     result = True
         except Exception:
-            log.error(f"Can't check_response. Response seems not matching with TG API")
+            log.exception(f"Can't check_response. Response seems not matching with TG API")
             result = False
         return result
 
-    def send_message(self, chat_id:int, text:str, smart_trim:bool = True, trim_end_str:str="...", parse_mode="HTML"):
+    def send_message(self, chat_id:int, text:str, parse_mode="HTML"):
         try:
-            text = urllib.parse.quote_plus(self._util_limit_msg_len(text, smart_trim, trim_end_str))
-            response = self._send_request("sendMessage?text={}&chat_id={}&parse_mode={}".format(text, chat_id, parse_mode))
+            request = self._create_send_msg_request(chat_id, text, parse_mode)
+            response = self._send_request(request)
             response = json.loads(response)
             if not response["ok"]:
                 error_code = response["error_code"]
                 description = response["description"]
                 log.warning(f"send_message failed for chat_id:'{chat_id}'. error_code:{error_code} description:{description}")
         except Exception:
-            log.error(f"Can't communicate with TG server. Most likely communication issues.")
+            log.exception(f"send_message: can't communicate with TG server. Most likely communication issues.")
             response = None
         return response
 
-    def edit_message(self, chat_id:int, message_id:int, text:str, smart_trim:bool = True, trim_end_str:str="...", parse_mode="HTML"):
+    def send_message_thread(self, chat_id:int, message_thread_id:int, text:str, parse_mode="HTML"):
         try:
-            text = urllib.parse.quote_plus(self._util_limit_msg_len(text, smart_trim, trim_end_str))
+            request = self._create_send_msg_request(chat_id, text, parse_mode)
+            request += f"&message_thread_id={message_thread_id}"
+            response = self._send_request(request)
+            response = json.loads(response)
+            if not response["ok"]:
+                error_code = response["error_code"]
+                description = response["description"]
+                log.warning(f"send_message_thread failed for chat_id:'{chat_id}' message_thread_id:'{message_thread_id}'. error_code:{error_code} description:{description}")
+        except Exception:
+            log.exception(f"send_message_thread: can't communicate with TG server. Most likely communication issues.")
+            response = None
+        return response
+
+    def edit_message(self, chat_id:int, message_id:int, text:str, parse_mode="HTML"):
+        try:
+            text = urllib.parse.quote_plus(self._limit_text_len(text))
             response = self._send_request("editMessageText?chat_id={}&message_id={}&parse_mode={}&text={}".format(chat_id, message_id, parse_mode, text))
             response = json.loads(response)
             if not response["ok"]:
@@ -98,7 +126,7 @@ class SimpleTelegramApi:
                 else:
                     log.warning(f"edit_message failed for chat_id:'{chat_id}'. error_code:{error_code} description:{description}")
         except Exception:
-            log.error(f"Can't communicate with TG server. Most likely communication issues.")
+            log.exception(f"edit_message: can't communicate with TG server. Most likely communication issues.")
             response = None
         return response
 

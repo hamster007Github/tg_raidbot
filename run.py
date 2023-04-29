@@ -56,7 +56,7 @@ def config_logging(logger, console_loglevel = logging.INFO, file_loglevel = None
     # file logging
     if file_loglevel is not None:
         formatter_file = logging.Formatter('[%(asctime)s] [%(name)12s] [%(levelname)7s] %(message)s')
-        file_handler = RotatingFileHandler('RDMStatusTGBot.log', maxBytes=10**5, backupCount=5)
+        file_handler = RotatingFileHandler('tg_raidbot.log', maxBytes=10000000, backupCount=5)
         file_handler.setLevel(file_loglevel)
         file_handler.setFormatter(formatter_file)
         logger.addHandler(file_handler)

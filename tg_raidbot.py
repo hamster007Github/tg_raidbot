@@ -11,7 +11,6 @@ import time
 from datetime import datetime, timedelta
 # os functions (path, ...)
 import os
-#import sys
 # other
 from string import Template
 # .ini config parser and datacache
@@ -26,6 +25,7 @@ import logging
 from pogodata import Pogodata
 from simpletelegramapi import SimpleTelegramApi
 from scannerconnector import RdmConnector
+from msgidcache import MsgIdCache
 
 '''
 ****************************************
@@ -43,23 +43,15 @@ log = logging.getLogger(__name__)
 # Class: RaidChannel
 #****************************************
 class RaidChannel():
-    def __init__(self, chat_id:str, raidlevel_list:int, eggs:bool, raidlevel_grouping:bool = False, geofence:str = None, order_time_reverse:bool = False, pin_msg:bool = True):
+    def __init__(self, chat_id:str, raidlevel_list:int, eggs:bool, raidlevel_grouping:bool = False, geofence:str = None, order_time_reverse:bool = False, pin_msg:bool = True, message_thread_id:int = None):
         self.chat_id = chat_id
+        self.message_thread_id = message_thread_id
         self.raidlevel_list = raidlevel_list
         self.eggs = eggs
         self.raidlevel_grouping = raidlevel_grouping
         self.geofence = geofence
         self.order_time_reverse = order_time_reverse
         self.pin_msg = pin_msg
-
-    def get_geofence(self) -> str:
-        '''
-        if self.geofence_name is not None and self._geofence is None:
-            #get geofence coodinates
-            #@TODO: koji support
-            pass
-        '''
-        return self.geofence
 
 #****************************************
 # Class: TelegramRaidbot
@@ -68,8 +60,8 @@ class TelegramRaidbot():
     def __init__(self):
         self._rootdir = os.path.dirname(os.path.abspath(__file__))
         self.raidchannel_list = []
-        self._msgid_cache = {}
-        self._load_msgid_cache()
+        self._msgidcache = MsgIdCache()
+        self._msgidcache.restore_cache()
         if not self._load_config_parameter(self._rootdir + "/config.toml"):
             return 2
 
@@ -123,43 +115,29 @@ class TelegramRaidbot():
             cfg_raidconfig_array = config.get("raidconfig")
             for raidconfig in cfg_raidconfig_array:
                 chat_id = raidconfig['chat_id']
+                message_thread_id = self._load_toml_parameter(raidconfig, "message_thread_id", fallback = None)
                 raidlevel_list = raidconfig['raidlevel']
                 eggs = self._load_toml_parameter(raidconfig, "eggs", fallback = True)
                 raidlevel_grouping = self._load_toml_parameter(raidconfig, "raidlevel_grouping", fallback = True)
                 geofence = self._load_toml_parameter(raidconfig, "geofence", fallback = None)
                 order_time_reverse = self._load_toml_parameter(raidconfig, "order_time_reverse", fallback = False)
                 pin_msg = self._load_toml_parameter(raidconfig, "pin_msg", fallback = True)
-                self.raidchannel_list.append(RaidChannel(chat_id, raidlevel_list, eggs, raidlevel_grouping, geofence, order_time_reverse, pin_msg))
+                self.raidchannel_list.append(RaidChannel(chat_id, raidlevel_list, eggs, raidlevel_grouping, geofence, order_time_reverse, pin_msg, message_thread_id))
         except Exception:
             log.exception("Error in parsing configuration. Check your config.toml")
             return False
         return True
 
-    def _load_msgid_cache(self):
+    def _send_new_tg_msg(self, chat_id:str, msg:str, message_thread_id:int=None, pin_msg:bool=True) -> None:
         try:
-            f = open(".msgid_cache", "r")
-            self._msgid_cache = json.load(f)
-            log.info(f"load .msgid_cache: {self._msgid_cache}")
-            f.close()
-        except Exception as e:
-            log.warning(f"can't load .msgid_cache. exception:{e}")
- 
-    def _save_msgid_cache(self):
-        try:
-            f = open(".msgid_cache", "w")
-            json.dump(self._msgid_cache, f)
-            log.debug(f"save .msgid_cache: {self._msgid_cache}")
-            f.close()
-        except Exception as e:
-            log.exception(f"Exception '{type(e)}' in _save_msgid_cache()") 
-
-    def _send_new_tg_msg(self, chat_id:str, msg:str, pin_msg:bool=True) -> None:
-        try:
-            response = self._tgapi.send_message(chat_id=chat_id, text=msg, trim_end_str = self._cfg_tmpl_msglimit_reached_msg, parse_mode="HTML")
+            if message_thread_id is not None:
+                response = self._tgapi.send_message_thread(chat_id=chat_id, text=msg, message_thread_id=message_thread_id)
+            else:
+                response = self._tgapi.send_message(chat_id=chat_id, text=msg)
             log.debug(f"send new msg, response:{response}")
             if response["ok"]:
                 msg_id = response["result"]["message_id"]
-                self._msgid_cache.update({chat_id: msg_id})
+                self._msgidcache.set_message_id(chat_id, message_thread_id, msg_id)
                 if pin_msg:
                     log.debug(f"pin new message...")
                     result = self._tgapi.pin_message(chat_id = chat_id, message_id = msg_id)
@@ -169,20 +147,22 @@ class TelegramRaidbot():
         except Exception as e:
             log.exception(f"Exception '{type(e)}' in send_new_raid_msg()")
 
-    def update_tg_raid_msg(self, chat_id:str, msg:str, pin_msg:bool) -> None:
+    def update_tg_raid_msg(self, chat_id:str, msg:str, pin_msg:bool, message_thread_id:int=None) -> None:
+        msg = SimpleTelegramApi.util_smart_trim_text(msg, trim_end_str = self._cfg_tmpl_msglimit_reached_msg)
         # no old message to update found -> send new message
-        if chat_id not in self._msgid_cache.keys():
+        message_id = self._msgidcache.get_message_id(chat_id, message_thread_id)
+        if message_id is None:
             #send new message
-            self._send_new_tg_msg(chat_id, msg, pin_msg)
+            self._send_new_tg_msg(chat_id=chat_id, msg=msg, message_thread_id=message_thread_id, pin_msg=pin_msg)
         # update old message
         else:
             try:
-                response = self._tgapi.edit_message(chat_id=chat_id, message_id=self._msgid_cache[chat_id], text=msg, trim_end_str = self._cfg_tmpl_msglimit_reached_msg, parse_mode="HTML")
+                response = self._tgapi.edit_message(chat_id=chat_id, message_id=message_id, text=msg)
                 log.debug(f"edit msg, response:{response}")
                 if response is not None and not self._tgapi.is_response_ok(response):
                     # we got a valid response, but error reported -> we need to create new message
                     log.warning(f"update raid msg failed for chat_id:'{chat_id}' -> send new message...")
-                    self._send_new_tg_msg(chat_id, msg, pin_msg)
+                    self._send_new_tg_msg(chat_id=chat_id, msg=msg, message_thread_id=message_thread_id, pin_msg=pin_msg)
             except Exception as e:
                 log.exception(f"Exception '{type(e)}' in update_raid_msg()")
 
@@ -253,8 +233,10 @@ class TelegramRaidbot():
             if raidchannel.raidlevel_grouping:
                 # raidlevel grouping activated (true)
                 for raid_level in raidchannel.raidlevel_list:
-                    raidinfo_list = self._scannerconnector.get_raids([raid_level], raidchannel.eggs, raidchannel.get_geofence(), raidchannel.order_time_reverse)
+                    # get raid data from scanner for each configurated raid level
+                    raidinfo_list = self._scannerconnector.get_raids([raid_level], raidchannel.eggs, raidchannel.geofence, raidchannel.order_time_reverse)
                     if raidinfo_list:
+                        # create message part for raid level
                         v_raidlvl_name = self._pogodata.get_raidlevel_name(raid_level, True)
                         v_raidlvl_emoji = self._get_raidlevel_emoji(raid_level)
                         keywords = dict(
@@ -265,7 +247,7 @@ class TelegramRaidbot():
                         new_raid_msg += self._cfg_tmpl_grouped_title_msg.safe_substitute(keywords) + "\n"
                         new_raid_msg += self.create_raid_msg(raidinfo_list)
             else:
-                # raidlevel grouping not activated (false)
+                # raidlevel grouping not activated (false) -> get all raid data for all configurated raid level
                 raidinfo_list = self._scannerconnector.get_raids(raidchannel.raidlevel_list, raidchannel.eggs, raidchannel.get_geofence(), raidchannel.order_time_reverse)
                 new_raid_msg = self.create_raid_msg(raidinfo_list)
             # check for empty raidmessage (no raids) -> send out 'tmpl_no_raid_msg' from config.toml
@@ -274,8 +256,8 @@ class TelegramRaidbot():
             # add actual date + time (so everyone can see when raid message was updated last time)
             new_raid_msg += f"\n\u23F1 {datetime.now().strftime('%d.%m.%y %H:%M')}"
             log.debug(f"new raid_msg (len:{len(new_raid_msg)}):\n{new_raid_msg}")
-            self.update_tg_raid_msg(raidchannel.chat_id, new_raid_msg, raidchannel.pin_msg)
-        self._save_msgid_cache()
+            self.update_tg_raid_msg(raidchannel.chat_id, new_raid_msg, raidchannel.pin_msg, raidchannel.message_thread_id)
+        self._msgidcache.store_cache()
         log.debug("update_raids() done")
 
     def run(self):
@@ -302,3 +284,4 @@ class TelegramRaidbot():
                 log.error("exception during run() cycle: ")
                 log.exception(e)
             time.sleep(self._sleep_mainloop_in_s)
+
