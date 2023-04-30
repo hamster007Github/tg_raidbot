@@ -4,6 +4,6 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements.txt requirements.in
 #
-mysql-connector-python
+mysql-connector-python==8.0.32
 requests
 tomli >= 1.1.0 ; python_version < "3.11"
