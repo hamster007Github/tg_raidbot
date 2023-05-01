@@ -32,14 +32,16 @@ class MsgIdCache():
         self._msgid_cache_dict = {}
         pass
 
-    def _create_key_string(self, chat_id:str, message_thread_id:int=None) -> str:
-        if message_thread_id is None:
+    def _create_key_string(self, chat_id:str, message_thread_id:int=0) -> str:
+        """create key string"""
+        if message_thread_id == 0:
             key = f"{chat_id}"
         else:
             key = f"{chat_id}:{message_thread_id}"
         return key
 
     def restore_cache(self) -> None:
+        """load cachefile data into MsgIdCache dict"""
         try:
             f = open(self._filename, "r")
             msgid_cache_file = json.load(f)
@@ -50,6 +52,7 @@ class MsgIdCache():
             log.warning(f"can't load .msgid_cache. exception:{e}")
 
     def store_cache(self) -> None:
+        """save MsgIdCache dict into cachefile"""
         try:
             f = open(self._filename, "w")
             json.dump(self._msgid_cache_dict, f)
@@ -59,13 +62,15 @@ class MsgIdCache():
             log.warning(f"Exception '{type(e)}' in _save_msgid_cache_dict()")
 
     def set_message_id(self, chat_id:str, message_thread_id:int, message_id:int) -> None:
+        """set message_id in MsgIdCache dict entry"""
         try:
             key = self._create_key_string(chat_id, message_thread_id)
             self._msgid_cache_dict.update({key: message_id})
         except Exception:
             log.exception(f"set_message_id() exception")
 
-    def get_message_id(self, chat_id:str, message_thread_id:int=None) -> int:
+    def get_message_id(self, chat_id:str, message_thread_id:int=0) -> int:
+        """get message_id from MsgIdCache dict entry"""
         message_id = None
         try:
             key = self._create_key_string(chat_id, message_thread_id)
