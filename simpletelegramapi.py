@@ -31,15 +31,21 @@ class SimpleTelegramApi:
         self._base_url = self._get_base_url(api_token)
 
     def _get_base_url(self, api_token:str) -> str:
+        """get TG bot API base url including bot token"""
+
         return "https://api.telegram.org/bot{}/".format(api_token)
 
     def _send_request(self, command:str) -> str:
+        """send TG bot API https request and return https response"""
+
         request_url = self._base_url + command
         response = requests.get(request_url)
         decoded_response = response.content.decode("utf8")
         return decoded_response
 
     def _limit_text_len(self, text:str) -> str:
+        """trim text to <= MAX_MSG_LEN"""
+
         if len(text) > MAX_MSG_LEN:
             # trim to max len - trim_end_str
             trimmed_text = text[:(MAX_MSG_LEN-1)]
@@ -47,13 +53,18 @@ class SimpleTelegramApi:
             trimmed_text = text
         return trimmed_text
 
-    def _create_send_msg_request(self, chat_id:int, text:str, parse_mode:str) -> str:
+    def _create_send_msg_request(self, chat_id:str, text:str, parse_mode:str) -> str:
+        """create a telegram bot API url request string"""
+
         text = urllib.parse.quote_plus(self._limit_text_len(text))
         request = f"sendMessage?text={text}&chat_id={chat_id}&parse_mode={parse_mode}"
         return request
 
     @staticmethod
     def util_smart_trim_text(text:str, trim_end_str:str="...", trim_str:str="\n") -> str:
+        """smart trim text to <= MAX_MSG_LEN until next trim_str substring (default: new line) was found.
+        Insert a trim_end_str substring at the end of the text to mark text as trimmed."""
+
         if len(text) > MAX_MSG_LEN:
             # trim to max len - trim_end_str
             trimmed_text = text[:(MAX_MSG_LEN-len(trim_end_str))]
@@ -66,7 +77,9 @@ class SimpleTelegramApi:
             trimmed_text = text
         return trimmed_text
 
-    def is_response_ok(self, response) -> bool:
+    def is_response_ok(self, response:dict) -> bool:
+        """check response of a message and return interpretation"""
+
         result = False
         try:
             if isinstance(response, dict):
@@ -84,7 +97,9 @@ class SimpleTelegramApi:
             result = False
         return result
 
-    def send_message(self, chat_id:int, text:str, parse_mode="HTML"):
+    def send_message(self, chat_id:str, text:str, parse_mode="HTML"):
+        """send a new text message into a chat"""
+
         try:
             request = self._create_send_msg_request(chat_id, text, parse_mode)
             response = self._send_request(request)
@@ -98,7 +113,9 @@ class SimpleTelegramApi:
             response = None
         return response
 
-    def send_message_thread(self, chat_id:int, message_thread_id:int, text:str, parse_mode="HTML"):
+    def send_message_thread(self, chat_id:str, message_thread_id:int, text:str, parse_mode="HTML") -> dict:
+        """send a new text message into a topic(message thread) of a chat"""
+
         try:
             request = self._create_send_msg_request(chat_id, text, parse_mode)
             request += f"&message_thread_id={message_thread_id}"
@@ -113,7 +130,9 @@ class SimpleTelegramApi:
             response = None
         return response
 
-    def edit_message(self, chat_id:int, message_id:int, text:str, parse_mode="HTML"):
+    def edit_message(self, chat_id:str, message_id:int, text:str, parse_mode="HTML") -> dict:
+        """edit a text message from a chat"""
+
         try:
             text = urllib.parse.quote_plus(self._limit_text_len(text))
             response = self._send_request("editMessageText?chat_id={}&message_id={}&parse_mode={}&text={}".format(chat_id, message_id, parse_mode, text))
@@ -130,7 +149,9 @@ class SimpleTelegramApi:
             response = None
         return response
 
-    def delete_message(self, chat_id:int, message_id:int):
+    def delete_message(self, chat_id:str, message_id:int) -> dict:
+        """delete a message from a chat"""
+
         try:
             response = self._send_request("deleteMessage?chat_id={}&message_id={}".format(chat_id, message_id))
             response = json.loads(response)
@@ -143,7 +164,9 @@ class SimpleTelegramApi:
             response = None
         return response
 
-    def pin_message(self, chat_id:int, message_id:int, disable_notification="True"):
+    def pin_message(self, chat_id:str, message_id:int, disable_notification:bool="True") -> dict:
+        """pin a message in a chat"""
+
         try:
             response = self._send_request("pinChatMessage?chat_id={}&message_id={}&disable_notification={}".format(chat_id, message_id, disable_notification))
             response = json.loads(response)
@@ -154,9 +177,4 @@ class SimpleTelegramApi:
         except Exception:
             log.error(f"Can't communicate with TG server. Most likely communication issues.")
             response = None
-        return response
-
-    def get_message(self):
-        response = self._send_request("getUpdates")
-        response = json.loads(response)
         return response
