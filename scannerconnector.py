@@ -108,7 +108,7 @@ class RdmConnector():
         sql_geofence = "" if geofence == "" else f"AND ST_CONTAINS(st_geomfromtext('POLYGON(({geofence}))') , point(lat,lon))"
         sql_unknown_raids = "" if unknown_raids else "AND raid_pokemon_id <> 0"
         raidlevel_str = ','.join([str(raidlevel) for raidlevel in raidlevel_list])
-        sql_query = f"SELECT name AS gym_name, raid_level, raid_pokemon_id, raid_battle_timestamp, raid_end_timestamp, raid_pokemon_move_1 AS atk_fast, raid_pokemon_move_2 AS atk_charge, lat, lon FROM gym WHERE UNIX_TIMESTAMP() < raid_end_timestamp AND raid_level IN ({raidlevel_str}) {sql_geofence} {sql_unknown_raids} ORDER BY raid_spawn_timestamp {sql_order};"
+        sql_query = f"SELECT name AS gym_name, raid_level, raid_pokemon_id, raid_battle_timestamp, raid_end_timestamp, raid_pokemon_move_1 AS atk_fast, raid_pokemon_move_2 AS atk_charge, lat, lon FROM gym WHERE UNIX_TIMESTAMP() < raid_end_timestamp AND raid_level IN ({raidlevel_str}) {sql_geofence} {sql_unknown_raids} ORDER BY raid_end_timestamp {sql_order};"
         dbreturn = self._dbconnector.execute_query(sql_query)
         return dbreturn
 
