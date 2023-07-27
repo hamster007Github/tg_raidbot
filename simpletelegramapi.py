@@ -53,11 +53,18 @@ class SimpleTelegramApi:
             trimmed_text = text
         return trimmed_text
 
-    def _create_send_msg_request(self, chat_id:str, text:str, parse_mode:str) -> str:
+    def _create_send_msg_request(self, chat_id:str, text:str, parse_mode:str, disable_web_page_preview:bool = True) -> str:
         """create a telegram bot API url request string"""
 
         text = urllib.parse.quote_plus(self._limit_text_len(text))
-        request = f"sendMessage?text={text}&chat_id={chat_id}&parse_mode={parse_mode}"
+        request = f"sendMessage?text={text}&chat_id={chat_id}&parse_mode={parse_mode}&disable_web_page_preview={disable_web_page_preview}"
+        return request
+
+    def _create_edit_msg_request(self, chat_id:str, message_id:str, text:str, parse_mode:str, disable_web_page_preview:bool = True) -> str:
+        """create a telegram bot API url request string"""
+
+        text = urllib.parse.quote_plus(self._limit_text_len(text))
+        request = f"editMessageText?chat_id={chat_id}&message_id={message_id}&parse_mode={parse_mode}&disable_web_page_preview={disable_web_page_preview}&text={text}"
         return request
 
     @staticmethod
@@ -134,8 +141,8 @@ class SimpleTelegramApi:
         """edit a text message from a chat"""
 
         try:
-            text = urllib.parse.quote_plus(self._limit_text_len(text))
-            response = self._send_request("editMessageText?chat_id={}&message_id={}&parse_mode={}&text={}".format(chat_id, message_id, parse_mode, text))
+            request = self._create_edit_msg_request(chat_id, message_id, text, parse_mode)
+            response = self._send_request(request)
             response = json.loads(response)
             if not response["ok"]:
                 error_code = response["error_code"]
