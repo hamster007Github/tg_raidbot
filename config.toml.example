@@ -6,13 +6,19 @@ raidupdate_cycle_in_s = 60
 # update external pogodata cycle in hours
 pogodata_update_cycle_in_h = 24
 
-[db]
+[db]    # only RDM supported currently
 # only RDM supported currently
 host = "localhost"
 port = 3307
 name = "rdmdb"
 user = "rdmuser"
 password = "rdmuser_password"
+
+[koji]  # koji api settings to get geofence data by area name
+# uncomment and edit link matching your environment, if you want to use koji and "area" parameter for [[raidconfig]]
+#api_link = "http://<host>:<port>/api/v1/geofence/Poracle/<project>"
+# uncomment and set token, if you configurate one
+#bearer_token = "<your_token>"
 
 [format]
 # language of raid data.
@@ -24,6 +30,8 @@ max_gymname_len = 27
 time_format = "%H:%M"
 # string to use, if there is no gymname set in database (NULL, None). Default: "N/A"
 unknown_gym_name = "N/A"
+# change number of decimal places for gps coodinates in google maps link (5 ~= 1m)
+#coords_decimal_places = 5
 
 [templates]
 # General:
@@ -61,13 +69,17 @@ eggs = true                 # (optional) true[default]: also show raid eggs, fal
 raidlevel_grouping = true   # (optional) true[default]: order raids by raidlevel + time, false: order raids only by time
 order_time_reverse = false  # (optional) true: order raids by raidlevel + time, false[default]: order raids only by time
 pin_msg = true              # (optional) true[default]: always pin new raid message, false: don't pin raid message (if you change this, you need to delete old message first)
-geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0" # (optional): filter raids by geofence. Must be a closed geofence (last coordinate = first coordinate). Format: "lat_1 lon_1, lat_2 lon_2, ..., lat_1 lon_1"
+geofence = "40.0 7.0, 40.0 8.0, 50.0 8.0, 50.0 7.0, 40.0 7.0" #filter raids by geofence. Must be a closed geofence (last coordinate = first coordinate). Format: "lat_1 lon_1, lat_2 lon_2, ..., lat_1 lon_1"
+geofence_koji = "newyork"   #geofence name of your koji project. Needs [koji] configuration parameter. If set geofence and geofence_koji, then geofence_koji is used.
+
 
 # additional raidchannel(s) -> remove '#' and set values.
 #[[raidconfig]]
-#chat_id =
-#raidlevel =
-#eggs =
-#raidlevel_grouping =
-#order_time_reverse =
-#geofence =
+#chat_id = "123456789"
+#message_thread_id = 123
+#raidlevel = [1,2,3,4,5,6,7,8,9,10]
+#eggs = true/false
+#raidlevel_grouping = true/false
+#order_time_reverse = true/false
+#geofence = " "
+#geofence_koji = "<geofence name>"
