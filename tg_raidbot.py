@@ -187,9 +187,10 @@ class TelegramRaidbot():
                     first = True
                     for coords in area['path']:
                         if first:
-                            geofence_str += f"{coords[0]}{coords[1]}"
+                            geofence_str += f"{coords[0]} {coords[1]}"
+                            first = False
                         else:
-                            geofence_str += f",{coords[0]}{coords[1]}"
+                            geofence_str += f",{coords[0]} {coords[1]}"
                     new_area = {
                         "name":f"{area['name']}",
                         "geofence":geofence_str
