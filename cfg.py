@@ -134,11 +134,11 @@ class Cfg():
                 "eggs": Cfg._get_value(cfg_raidconfig, ["eggs"], fallback = True),
                 "raidlevel_grouping": Cfg._get_value(cfg_raidconfig, ["raidlevel_grouping"], fallback = True),
                 "geofence": Cfg._get_value(cfg_raidconfig, ["geofence"], fallback = ""),
-                "area": Cfg._get_value(cfg_raidconfig, ["area"], fallback = ""),
+                "geofence_koji": Cfg._get_value(cfg_raidconfig, ["geofence_koji"], fallback = ""),
                 "order_time_reverse": Cfg._get_value(cfg_raidconfig, ["order_time_reverse"], fallback = False),
                 "pin_msg": Cfg._get_value(cfg_raidconfig, ["pin_msg"], fallback = True)
             }
-            if raidconfig_dict['area'] == "" and raidconfig_dict['geofence'] == "":
-                log.error(f"Missing configuration parameter: 'Area' or 'geofence' need to be set for '[[raidconfig]]'")
+            if raidconfig_dict['geofence_koji'] == "" and raidconfig_dict['geofence'] == "":
+                log.error(f"Missing configuration parameter: 'geofence_koji' or 'geofence' need to be set for '[[raidconfig]]'")
                 raise KeyError
             self.raidconfig_list.append(raidconfig_dict)
