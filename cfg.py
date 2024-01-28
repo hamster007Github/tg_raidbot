@@ -98,18 +98,23 @@ class Cfg():
         self.pogodata_update_cycle_in_s = Cfg._get_value(cfg_dict, ["general","pogodata_update_cycle_in_h"], fallback=24) * 3600
         self.api_token = Cfg._get_value(cfg_dict, ["general", "token"])
 
-        # [db]: database setting
+        # [db]: database settings
         self.db_host = Cfg._get_value(cfg_dict, ["db", "host"])
         self.db_name = Cfg._get_value(cfg_dict, ["db", "name"])
         self.db_user = Cfg._get_value(cfg_dict, ["db", "user"])
         self.db_password = Cfg._get_value(cfg_dict, ["db", "password"])
         self.db_port = Cfg._get_value(cfg_dict, ["db", "port"], fallback=3306)
 
+        # [koji]: koji settings
+        self.koji_api_link = Cfg._get_value(cfg_dict, ["koji", "api_link"], fallback="")
+        self.koji_bearer_token = Cfg._get_value(cfg_dict, ["koji", "bearer_token"], fallback="")
+
         # [format]
         self.format_language = Cfg._get_value(cfg_dict, ["format", "language"], fallback="en")
         self.format_max_gymname_len = Cfg._get_value(cfg_dict, ["format", "max_gymname_len"], fallback = 27)
         self.format_time = Cfg._get_value(cfg_dict, ["format", "time_format"], fallback = "%H:%M")
         self.format_unknown_gym_name = Cfg._get_value(cfg_dict, ["format", "unknown_gym_name"], fallback = "N/A")
+        self.format_coords_decimal_places = Cfg._get_value(cfg_dict, ["format", "coords_decimal_places"], fallback = 5)
 
         # [templates]
         self.tmpl_msglimit_reached_msg = Cfg._get_value(cfg_dict, ["templates", "tmpl_msglimit_reached_msg"], fallback = "...")
@@ -129,7 +134,16 @@ class Cfg():
                 "eggs": Cfg._get_value(cfg_raidconfig, ["eggs"], fallback = True),
                 "raidlevel_grouping": Cfg._get_value(cfg_raidconfig, ["raidlevel_grouping"], fallback = True),
                 "geofence": Cfg._get_value(cfg_raidconfig, ["geofence"], fallback = ""),
+                "geofence_koji": Cfg._get_value(cfg_raidconfig, ["geofence_koji"], fallback = ""),
                 "order_time_reverse": Cfg._get_value(cfg_raidconfig, ["order_time_reverse"], fallback = False),
                 "pin_msg": Cfg._get_value(cfg_raidconfig, ["pin_msg"], fallback = True)
             }
+            # check for missing geofence configuration
+            if raidconfig_dict['geofence_koji'] == "" and raidconfig_dict['geofence'] == "":
+                log.error("[[raidconfig]] parameter issue: 'geofence_koji' or 'geofence' need to be set")
+                raise KeyError
+            # check for missing Koji configuration
+            if raidconfig_dict['geofence_koji'] != "" and self.koji_api_link == "":
+                log.error("[[raidconfig]] parameter issue: 'geofence_koji' parameter set, but [koji] parameter 'api_link' not set")
+                raise KeyError
             self.raidconfig_list.append(raidconfig_dict)

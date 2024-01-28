@@ -20,6 +20,9 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib
 import json
+# url handling for koji api
+import urllib
+import requests
 # logging
 import logging
 # tg_raidbot modules
@@ -63,6 +66,7 @@ class TelegramRaidbot():
     def __init__(self):
         self.raidchannel_list = []
         self._msgidcache = MsgIdCache()
+        self._koji_geofencelist = []
 
     def _send_new_tg_msg(self, chat_id:str, msg:str, message_thread_id:int=0, pin_msg:bool=True) -> None:
         try:
@@ -120,7 +124,7 @@ class TelegramRaidbot():
                     v_gym_name = (gym_name[:(max_len-2)] + '..') if len(gym_name) > max_len else gym_name
                 v_lat = raidinfo['lat']
                 v_lon = raidinfo['lon']
-                v_gmaps_url = f"https://maps.google.de/?q={v_lat:.6f},{v_lon:.6f}"
+                v_gmaps_url = f"https://maps.google.de/?q={v_lat:.{cfg.format_coords_decimal_places}f},{v_lon:.{cfg.format_coords_decimal_places}f}"
                 v_raidlevel_name = self._pogodata.get_raidlevel_name(raidinfo['raid_level'])
                 v_raidlevel_num = raidinfo['raid_level']
                 v_raidlvl_emoji = self._get_raidlevel_emoji(v_raidlevel_num)
@@ -162,6 +166,54 @@ class TelegramRaidbot():
             pass
         return emoji
 
+    def _load_geofences_from_koji(self):
+        log.debug("_load_geofences_from_koji()...")
+        if cfg.koji_api_link != "":
+            header = {"Content-Type": "application/json"}
+            if cfg.koji_bearer_token != "":
+                header.update({"Authorization": f"Bearer {cfg.koji_bearer_token}"})
+            try:
+                response = requests.get(cfg.koji_api_link, headers=header)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as err:
+                log.error(f"Koji API connection issue: {err}")
+                raise KeyError
+            try:
+                decoded_response = json.loads(response.content.decode("utf8"))
+                area_list = decoded_response['data']
+                log.debug(f"Koji Data: {area_list}")
+                for area in area_list:
+                    geofence_str = ""
+                    first = True
+                    for coords in area['path']:
+                        if first:
+                            geofence_str += f"{coords[0]} {coords[1]}"
+                            first = False
+                        else:
+                            geofence_str += f",{coords[0]} {coords[1]}"
+                    new_area = {
+                        "name":f"{area['name']}",
+                        "geofence":geofence_str
+                    }
+                    self._koji_geofencelist.append(new_area)
+                log.debug(f"self._arealist: {self._koji_geofencelist}")
+            except Exception:
+                log.exception("Exception in _load_geofences_from_koji(): ")
+                raise KeyError
+        log.debug("_load_geofences_from_koji() done")
+
+    def _get_geofence_from_koji(self, geofencename:str) -> str:
+        geofence_str = None
+        try:
+            if self._koji_geofencelist:
+                for koji_geofence in self._koji_geofencelist:
+                    if geofencename == koji_geofence['name']:
+                        geofence_str = koji_geofence['geofence']
+        except Exception:
+            log.exception("Exception in _get_geofence_from_koji(): ")
+            raise KeyError
+        return geofence_str
+
     def update_raids(self):
         log.debug("update_raids()...")
         for raidchannel in self.raidchannel_list:
@@ -202,7 +254,17 @@ class TelegramRaidbot():
         try:
             self._msgidcache.restore_cache()
             cfg.load()
+            self._load_geofences_from_koji()
             for raidconfig in cfg.raidconfig_list:
+                koji_geofencename = raidconfig['geofence_koji']
+                if koji_geofencename != "":
+                    geofence_str = self._get_geofence_from_koji(koji_geofencename)
+                    if geofence_str:
+                        # overwrite raidconfig['geofence']
+                        raidconfig['geofence'] = geofence_str
+                    else:
+                        log.error(f"Koji api don't provide geofence with name '{koji_geofencename}'")
+                        raise KeyError
                 self.raidchannel_list.append(RaidChannel(raidconfig))
             #create scanner connector and tg interface
             self._scannerconnector = RdmConnector(db_host=cfg.db_host, db_port=cfg.db_port, db_name=cfg.db_name, db_username=cfg.db_user, db_password=cfg.db_password)
