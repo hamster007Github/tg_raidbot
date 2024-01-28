@@ -138,7 +138,12 @@ class Cfg():
                 "order_time_reverse": Cfg._get_value(cfg_raidconfig, ["order_time_reverse"], fallback = False),
                 "pin_msg": Cfg._get_value(cfg_raidconfig, ["pin_msg"], fallback = True)
             }
+            # check for missing geofence configuration
             if raidconfig_dict['geofence_koji'] == "" and raidconfig_dict['geofence'] == "":
-                log.error(f"Missing configuration parameter: 'geofence_koji' or 'geofence' need to be set for '[[raidconfig]]'")
+                log.error("[[raidconfig]] parameter issue: 'geofence_koji' or 'geofence' need to be set")
+                raise KeyError
+            # check for missing Koji configuration
+            if raidconfig_dict['geofence_koji'] != "" and self.koji_api_link == "":
+                log.error("[[raidconfig]] parameter issue: 'geofence_koji' parameter set, but [koji] parameter 'api_link' not set")
                 raise KeyError
             self.raidconfig_list.append(raidconfig_dict)
