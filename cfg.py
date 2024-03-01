@@ -94,7 +94,7 @@ class Cfg():
             raise KeyError
 
         # [general]
-        self.sleep_mainloop_in_s = Cfg._get_value(cfg_dict, ["general","raidupdate_cycle_in_s"], fallback=60)
+        self.raidupdate_cycle_in_s = Cfg._get_value(cfg_dict, ["general","raidupdate_cycle_in_s"], fallback=60)
         self.pogodata_update_cycle_in_s = Cfg._get_value(cfg_dict, ["general","pogodata_update_cycle_in_h"], fallback=24) * 3600
         self.api_token = Cfg._get_value(cfg_dict, ["general", "token"])
 

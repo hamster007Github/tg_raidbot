@@ -1,5 +1,5 @@
 # Description
-tg_raidbot is a configurable Telegram raid summary bot for scanner systems like RDM and MAD (currently only RDM is supported).
+tg_raidbot is a configurable Telegram raid summary bot for RDM or Golbat database.
 
 # Features
 - Configurable message templates with some keywords (see '[templates]' chapter in `config.toml.example`)
@@ -10,12 +10,13 @@ tg_raidbot is a configurable Telegram raid summary bot for scanner systems like 
 - Multiple raid chats, each with following individual configuration:
   - choose, if raids are grouped by raid level or only ordered by time
   - choose time order (latest or earliest end time first)
-  - geofence support
+  - Koji geofence (highly recommended) or manual geofence coordlist
   - include or exclude raid eggs
   - automatically pin message (activate or deactivate)
+- Koji geofence support
 
 # Limitations
-Only RDM is supported for now. Extension to support additional scanner systems should be easy by extending `scannerconnector.py`. PRs welcome.
+Only RDM and Golbat is supported for now. Extension to support additional scanner systems should be easy by extending `scannerconnector.py`. PRs welcome.
 
 # Installation
 It is highly recommended to use virtual python environment (example here with virtualenv plugin).
@@ -50,7 +51,7 @@ For now, see `config.toml.example` file. All options are described there.
 - public channel: @blub
 - show raids level 5 and 6 (mega) including raid eggs grouped by raid level. First level 5, second level 6
 - raids with earliest end time should be showed first
-- no geofence filtering (all raids in database). Remark: by don't provide geofence parameter
+- only raids in Koji geofence `newyork`. Note: Geofence with name `newyork` needs to be provided by configurated `[koji]` -> `api_link`
 
 ```
 [[raidconfig]]
@@ -59,6 +60,7 @@ raidlevel = [5,6]
 eggs = true
 raidlevel_grouping = true
 order_time_reverse = false
+geofence_koji = "newyork"
 ```
 ### example 2
 - private group chat_id: -987654321

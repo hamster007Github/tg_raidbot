@@ -45,6 +45,34 @@ cfg = Cfg(os.path.dirname(__file__) + "/config.toml")
 * Classes
 ****************************************
 '''
+
+#****************************************
+# Class: JobHandler
+#****************************************
+class Job():
+    def __init__(self, job_fct, interval_s:int, run_immediately = False) -> None:
+        self.interval_s = interval_s
+        self.job_fct = job_fct
+        if run_immediately:
+            # set last_exec to past, that job will be executed directly
+            self.last_exec = 0.0
+        else:
+            self.last_exec = time.time()
+
+class JobHandler():
+    def __init__(self) -> None:
+        self._job_list = []
+
+    def add_job(self, job_fct, interval_s:int, run_immediately = False) -> None:
+        self._job_list.append(Job(job_fct, interval_s, run_immediately))
+
+    def run_jobs(self) -> None:
+        for job in self._job_list:
+            time_now = time.time()
+            if (time_now - job.last_exec) > job.interval_s:
+                job.job_fct()
+                job.last_exec = time_now
+
 #****************************************
 # Class: RaidChannel
 #****************************************
@@ -67,6 +95,7 @@ class TelegramRaidbot():
         self.raidchannel_list = []
         self._msgidcache = MsgIdCache()
         self._koji_geofencelist = []
+        self._jobhandler = JobHandler()
 
     def _send_new_tg_msg(self, chat_id:str, msg:str, message_thread_id:int=0, pin_msg:bool=True) -> None:
         try:
@@ -215,7 +244,7 @@ class TelegramRaidbot():
         return geofence_str
 
     def update_raids(self):
-        log.debug("update_raids()...")
+        log.info("update raid messages...")
         for raidchannel in self.raidchannel_list:
             new_raid_msg = ""
             if raidchannel.raidlevel_grouping:
@@ -245,12 +274,15 @@ class TelegramRaidbot():
             new_raid_msg += f"\n\u23F1 {datetime.now().strftime('%d.%m.%y %H:%M')}"
             log.debug(f"new raid_msg (len:{len(new_raid_msg)}):\n{new_raid_msg}")
             self.update_tg_raid_msg(raidchannel, new_raid_msg)
+            time.sleep(1)
         self._msgidcache.store_cache()
         log.debug("update_raids() done")
 
     def run(self):
         log.info("start...")
+        ########
         # init
+        ########
         try:
             self._msgidcache.restore_cache()
             cfg.load()
@@ -271,22 +303,23 @@ class TelegramRaidbot():
             self._tgapi = SimpleTelegramApi(cfg.api_token)
             self._pogodata = Pogodata(cfg.format_language)
             self._pogodata.update()
-            last_pogodata_update = time.time()
+            self._jobhandler.add_job(self.update_raids, cfg.raidupdate_cycle_in_s, True)
+            self._jobhandler.add_job(self._pogodata.update, cfg.pogodata_update_cycle_in_s, False)
         except KeyError:
             log.error("Config error during run() - init part")
             return
         except Exception:
             log.exception("Unexpected exception during run() - init part")
             return
+
+        ########
         # cyclic functions
+        ########
         while True:
             try:
-                self.update_raids()
-                if (time.time() - last_pogodata_update) > cfg.pogodata_update_cycle_in_s:
-                    self._pogodata.update()
-                    last_pogodata_update = time.time()
+                self._jobhandler.run_jobs()
             except Exception as e:
                 log.error("exception during run() cycle: ")
                 log.exception(e)
-            time.sleep(cfg.sleep_mainloop_in_s)
+            time.sleep(1)
 

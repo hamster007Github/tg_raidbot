@@ -44,20 +44,16 @@ class DbConnector():
 
     def _connect(self) -> None:
         """Connect to database, if not already connected"""
-        try:
-            # only create new connection, if not already a connection is available
-            if self._db_connection is None or not self._db_connection.is_connected():
-                self._db_connection = mysql.connector.connect(
-                    host = self._host,
-                    port = self._port,
-                    user = self._username,
-                    passwd = self._password,
-                    database = self._db_name
-                )
-                log.debug(f"DbConnector: SQL db connected successfully")
-        except Error as e:
-            log.error("DbConnector: SQL connection error.")
-            log.exception("Exception info:")
+        # only create new connection, if not already a connection is available
+        if self._db_connection is None or not self._db_connection.is_connected():
+            self._db_connection = mysql.connector.connect(
+                host = self._host,
+                port = self._port,
+                user = self._username,
+                passwd = self._password,
+                database = self._db_name
+            )
+            log.debug(f"DbConnector: SQL db connected successfully")
         return self._db_connection
 
     def _disconnect(self) -> None:
@@ -83,6 +79,10 @@ class DbConnector():
             cursor.close()
             log.debug(f"DbConnector: SQL query successfully executed")
             log.debug(f"DbConnector: SQL query result: {result}")
+        except mysql.connector.errors.DatabaseError:
+            log.error("DbConnector: mySQL DatabaseError. Cound not connect to database. MySQL server down?")
+            log.exception("Exception info:")
+            self._disconnect()
         except Error as e:
             log.error("DbConnector: SQL query error.")
             log.exception("Exception info:")
