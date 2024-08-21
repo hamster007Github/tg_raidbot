@@ -16,7 +16,8 @@ tg_raidbot is a configurable Telegram raid summary bot for RDM or Golbat databas
 - Koji geofence support
 
 # Limitations
-Only RDM and Golbat is supported for now.
+- Only RDM and Golbat is supported for now.
+- Python >= 3.10 needed
 
 # Installation
 It is highly recommended to use virtual python environment (example here with virtualenv plugin).
