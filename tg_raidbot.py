@@ -15,21 +15,18 @@ import os
 # other
 from string import Template
 # .ini config parser and datacache
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
 import json
 # url handling for koji api
 import urllib
 import requests
 # logging
 import logging
+# mappingpylib modules
+from mappingpylib.pogotranslation import PogoTranslation
+from mappingpylib.simpletelegramapi import SimpleTelegramApi
+from mappingpylib.golbatdb import GolbatDb
+from mappingpylib.msgidcache import MsgIdCache
 # tg_raidbot modules
-from pogodata import Pogodata
-from simpletelegramapi import SimpleTelegramApi
-from scannerconnector import RdmConnector
-from msgidcache import MsgIdCache
 from cfg import Cfg
 
 '''
@@ -100,12 +97,11 @@ class TelegramRaidbot():
     def _send_new_tg_msg(self, chat_id:str, msg:str, message_thread_id:int=0, pin_msg:bool=True) -> None:
         try:
             if message_thread_id != 0:
-                response = self._tgapi.send_message_thread(chat_id=chat_id, text=msg, message_thread_id=message_thread_id)
+                return_success, msg_id = self._tgapi.send_message_thread(chat_id=chat_id, text=msg, message_thread_id=message_thread_id)
             else:
-                response = self._tgapi.send_message(chat_id=chat_id, text=msg)
-            log.debug(f"send new msg, response:{response}")
-            if response["ok"]:
-                msg_id = response["result"]["message_id"]
+                return_success, msg_id = self._tgapi.send_message(chat_id=chat_id, text=msg)
+            log.debug(f"send new msg, return_success:{return_success}, return_message_id:{msg_id}")
+            if return_success:
                 self._msgidcache.set_message_id(chat_id, message_thread_id, msg_id)
                 if pin_msg:
                     log.debug(f"pin new message...")
@@ -126,9 +122,9 @@ class TelegramRaidbot():
         # update old message
         else:
             try:
-                response = self._tgapi.edit_message(chat_id=raidchannel.chat_id, message_id=message_id, text=msg)
-                log.debug(f"edit msg, response:{response}")
-                if response is not None and not self._tgapi.is_response_ok(response):
+                return_success = self._tgapi.edit_message(chat_id=raidchannel.chat_id, message_id=message_id, text=msg)
+                log.debug(f"edit msg, return_success:{return_success}")
+                if not return_success:
                     # we got a valid response, but error reported -> we need to create new message
                     log.warning(f"update raid msg failed for chat_id:'{raidchannel.chat_id}' -> send new message...")
                     self._send_new_tg_msg(chat_id=raidchannel.chat_id, msg=msg, message_thread_id=raidchannel.message_thread_id, pin_msg=raidchannel.pin_msg)
@@ -154,7 +150,7 @@ class TelegramRaidbot():
                 v_lat = raidinfo['lat']
                 v_lon = raidinfo['lon']
                 v_gmaps_url = f"https://maps.google.de/?q={v_lat:.{cfg.format_coords_decimal_places}f},{v_lon:.{cfg.format_coords_decimal_places}f}"
-                v_raidlevel_name = self._pogodata.get_raidlevel_name(raidinfo['raid_level'])
+                v_raidlevel_name = self._pogotranslation.get_raidlevel_name(raidinfo['raid_level'])
                 v_raidlevel_num = raidinfo['raid_level']
                 v_raidlvl_emoji = self._get_raidlevel_emoji(v_raidlevel_num)
                 keywords = dict(
@@ -174,9 +170,9 @@ class TelegramRaidbot():
                     new_raid_msg += Template(cfg.tmpl_raidegg_msg).safe_substitute(keywords) + "\n"
                 else:
                     #calculate additional keywords (started raid only)
-                    v_atk_fast = self._pogodata.get_move_name(raidinfo['atk_fast'])
-                    v_atk_charge = self._pogodata.get_move_name(raidinfo['atk_charge'])
-                    v_pokemon_name = self._pogodata.get_pokemon_name(raidinfo['raid_pokemon_id'])
+                    v_atk_fast = self._pogotranslation.get_move_name(raidinfo['atk_fast'])
+                    v_atk_charge = self._pogotranslation.get_move_name(raidinfo['atk_charge'])
+                    v_pokemon_name = self._pogotranslation.get_pokemon_name(raidinfo['raid_pokemon_id'])
                     keywords.update(
                         atk_fast = v_atk_fast,
                         atk_charge = v_atk_charge,
@@ -202,6 +198,7 @@ class TelegramRaidbot():
             if cfg.koji_bearer_token != "":
                 header.update({"Authorization": f"Bearer {cfg.koji_bearer_token}"})
             try:
+                requests.packages.urllib3.util.connection.HAS_IPV6 = False  # force IPv4
                 response = requests.get(cfg.koji_api_link, headers=header)
                 response.raise_for_status()
             except requests.exceptions.RequestException as err:
@@ -254,7 +251,7 @@ class TelegramRaidbot():
                     raidinfo_list = self._scannerconnector.get_raids([raid_level], raidchannel.eggs, raidchannel.geofence, raidchannel.order_time_reverse)
                     if raidinfo_list:
                         # create message part for raid level
-                        v_raidlvl_name = self._pogodata.get_raidlevel_name(raid_level, True)
+                        v_raidlvl_name = self._pogotranslation.get_raidlevel_name(raid_level, True)
                         v_raidlvl_emoji = self._get_raidlevel_emoji(raid_level)
                         keywords = dict(
                             raidlvl_name = v_raidlvl_name,
@@ -299,12 +296,12 @@ class TelegramRaidbot():
                         raise KeyError
                 self.raidchannel_list.append(RaidChannel(raidconfig))
             #create scanner connector and tg interface
-            self._scannerconnector = RdmConnector(db_host=cfg.db_host, db_port=cfg.db_port, db_name=cfg.db_name, db_username=cfg.db_user, db_password=cfg.db_password)
+            self._scannerconnector = GolbatDb(host=cfg.db_host, db_name=cfg.db_name, username=cfg.db_user, password=cfg.db_password, port=cfg.db_port)
             self._tgapi = SimpleTelegramApi(cfg.api_token)
-            self._pogodata = Pogodata(cfg.format_language)
-            self._pogodata.update()
+            self._pogotranslation = PogoTranslation(cfg.format_language)
+            self._pogotranslation.update()
             self._jobhandler.add_job(self.update_raids, cfg.raidupdate_cycle_in_s, True)
-            self._jobhandler.add_job(self._pogodata.update, cfg.pogodata_update_cycle_in_s, False)
+            self._jobhandler.add_job(self._pogotranslation.update, cfg.pogodata_update_cycle_in_s, False)
         except KeyError:
             log.error("Config error during run() - init part")
             return
