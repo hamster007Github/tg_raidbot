@@ -1,5 +1,5 @@
 # Description
-tg_raidbot is a configurable Telegram raid summary bot for scanner systems like RDM and MAD (currently only RDM is supported).
+tg_raidbot is a configurable Telegram raid summary bot for RDM or Golbat database.
 
 # Features
 - Configurable message templates with some keywords (see '[templates]' chapter in `config.toml.example`)
@@ -10,22 +10,32 @@ tg_raidbot is a configurable Telegram raid summary bot for scanner systems like 
 - Multiple raid chats, each with following individual configuration:
   - choose, if raids are grouped by raid level or only ordered by time
   - choose time order (latest or earliest end time first)
-  - geofence support
+  - Koji geofence (highly recommended) or manual geofence coordlist
   - include or exclude raid eggs
   - automatically pin message (activate or deactivate)
+- Koji geofence support
 
 # Limitations
-Only RDM is supported for now. Extension to support additional scanner systems should be easy by extending `scannerconnector.py`. PRs welcome.
+Only RDM and Golbat is supported for now.
 
 # Installation
 It is highly recommended to use virtual python environment (example here with virtualenv plugin).
-- create environment: `virtualenv -p python3 ~/<your-venv-folder>/tg_raidbot_env`
+- `cd ~`
 - clone github repo: `git clone https://github.com/hamster007Github/tg_raidbot.git`
-- cd `tg_raidbot`
-- install dependencies:`~/<your-venv-folder>/tg_raidbot_env/bin/pip3 install -r requirements.txt`
+- `cd ~/tg_raidbot`
+- create python environment: `python3 -m venv ./.venv`
+- install dependencies:`./.venv/bin/pip install -r requirements.txt`
 - `cp config.toml.example config.toml`
 - adapt config.toml for your needs
-- run script: `~/<your-venv-folder>/tg_raidbot_env/bin/python3 run.py`
+
+# Update
+- `cd ~/tg_raidbot`
+- git repo update:`git pull`
+- update dependencies:`./.venv/bin/pip install -U -r requirements.txt`
+
+# run
+- `cd ~/tg_raidbot`
+- run script: `./.venv/bin/python3 run.py`
 
 # PM2 example setup
 Based on the examples in [Installation](#Installation) you can use following ecosystem file (linux user `myuser`):
@@ -33,8 +43,8 @@ Based on the examples in [Installation](#Installation) you can use following eco
 {
     name: 'tg_raidbot',
     script: 'run.py',
-    cwd: '/home/myuser/<your-installation-folder>tg_raidbot',
-    interpreter:'/home/myuser/<your-venv-folder>/tg_raidbot_env/bin/python3',
+    cwd: '/home/myuser/tg_raidbot',
+    interpreter:'/home/myuser/tg_raidbot/.venv/bin/python3',
     instances: 1,
     autorestart: true,
     restart_delay: 10000,
@@ -50,7 +60,7 @@ For now, see `config.toml.example` file. All options are described there.
 - public channel: @blub
 - show raids level 5 and 6 (mega) including raid eggs grouped by raid level. First level 5, second level 6
 - raids with earliest end time should be showed first
-- no geofence filtering (all raids in database). Remark: by don't provide geofence parameter
+- only raids in Koji geofence `newyork`. Note: Geofence with name `newyork` needs to be provided by configurated `[koji]` -> `api_link`
 
 ```
 [[raidconfig]]
@@ -59,6 +69,7 @@ raidlevel = [5,6]
 eggs = true
 raidlevel_grouping = true
 order_time_reverse = false
+geofence_koji = "newyork"
 ```
 ### example 2
 - private group chat_id: -987654321

@@ -4,6 +4,6 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements.txt requirements.in
 #
-mysql-connector-python==8.0.32
 requests
-tomli >= 1.1.0 ; python_version < "3.11"
+#tomli >= 1.1.0 ; python_version < "3.11"
+mappingpylib @ git+https://github.com/hamster007Github/mappingpylib.git

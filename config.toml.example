@@ -3,15 +3,15 @@
 token = "123456789:ABCDEFGHIJK"
 # update raid message cycle in seconds
 raidupdate_cycle_in_s = 60
-# update external pogodata cycle in hours
+# update external pogodata every x hours (used for translations)
 pogodata_update_cycle_in_h = 24
 
-[db]    # only RDM supported currently
+[db]    # RDM and Golbat database supported
 host = "localhost"
 port = 3307
-name = "rdmdb"
-user = "rdmuser"
-password = "rdmuser_password"
+name = "db"
+user = "user"
+password = "password"
 
 [koji]  # koji api settings to use get geofence data from koji (read data once during start)
 # uncomment and edit link matching your environment, if you want to use koji and "area" parameter for [[raidconfig]]. URL pattern: "http://<host>:<port>/api/v1/geofence/Poracle/<project>"
